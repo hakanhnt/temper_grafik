@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperleme Kırılma Tahmin Modeli</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        <!-- Sidebar / Header Area -->
+        <header class="main-header">
+            <div class="brand">
+                <i class="fa-solid fa-fire-flame-curved logo-icon"></i>
+                <div class="brand-text">
+                    <h1>TEMPER-AI</h1>
+                    <span>Cam Temperleme Kırılma Tahmini</span>
+                </div>
+            </div>
+            
+            <!-- Excel Upload Card -->
+            <div class="upload-card">
+                <h3><i class="fa-solid fa-file-excel"></i> Veri Seti Yükle</h3>
+                <p class="upload-desc">Grafikleri özetlemek ve örnek değerleri incelemek için Excel dosyasını seçin veya sürükleyin.</p>
+                <div class="drag-drop-zone" id="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                    <p>Excel Dosyasını Sürükleyin veya Tıklayın</p>
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;">
+                </div>
+                <div class="file-info" id="file-info" style="display: none;">
+                    <span id="file-name">dosya.xlsx</span>
+                    <button class="btn-remove-file" id="btn-remove-file"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="template-download-area">
+                    <a href="AK0001C.xlsx" download="AK0001C_ornek.xlsx" class="btn-download-template">
+                        <i class="fa-solid fa-file-arrow-down"></i> Örnek Şablonu İndir
+                    </a>
+                </div>
+            </div>
+
+            <!-- Format Guide Card -->
+            <div class="upload-card format-guide-card">
+                <h3><i class="fa-solid fa-circle-info"></i> Veri Format Rehberi</h3>
+                <ul class="format-list">
+                    <li><strong>S, T2 - T11:</strong> Fırın Sıcaklıkları (°C)</li>
+                    <li><strong>AB1 - AB3:</strong> Alt Soğutma Basınçları (bar)</li>
+                    <li><strong>ÜB1 - ÜB3:</strong> Üst Soğutma Basınçları (bar)</li>
+                    <li><strong>Şoklama Havası:</strong> Hava Sıcaklığı (°C)</li>
+                    <li><strong>Kırılma:</strong> 1 (Kırıldı) / 0 (Kırılmadı)</li>
+                </ul>
+            </div>
+
+            <!-- Stats/Summary when file is loaded -->
+            <div class="stats-panel" id="stats-panel" style="display: none;">
+                <h3><i class="fa-solid fa-chart-simple"></i> Veri Seti Özeti</h3>
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Toplam Satır</span>
+                        <span class="stat-value" id="stat-total-rows">-</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Kırılma Oranı</span>
+                        <span class="stat-value text-danger" id="stat-breakage-rate">-%</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Content -->
+        <main class="main-content">
+            <!-- Parameter Form Section -->
+            <section class="form-section dashboard-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-sliders"></i> Proses Parametreleri</h2>
+                    <div class="preset-controls">
+                        <button class="btn-preset btn-preset-success" id="preset-success"><i class="fa-solid fa-shield-halved"></i> Güvenli Senaryo</button>
+                        <button class="btn-preset btn-preset-fail" id="preset-fail"><i class="fa-solid fa-triangle-exclamation"></i> Riskli Senaryo</button>
+                    </div>
+                </div>
+
+                <form id="predictor-form">
+                    <!-- Fırın Bölge Sıcaklıkları -->
+                    <div class="form-group-title">Fırın Sıcaklık Profili (°C)</div>
+                    <div class="inputs-grid temp-grid">
+                        <div class="input-control">
+                            <label for="S">Giriş Sıcaklığı (S)</label>
+                            <input type="number" id="S" name="S" value="550" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T2">Bölge 2 (T2)</label>
+                            <input type="number" id="T2" name="T2" value="565" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T3">Bölge 3 (T3)</label>
+                            <input type="number" id="T3" name="T3" value="585" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T4">Bölge 4 (T4)</label>
+                            <input type="number" id="T4" name="T4" value="605" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T5">Bölge 5 (T5)</label>
+                            <input type="number" id="T5" name="T5" value="620" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T6">Bölge 6 (T6)</label>
+                            <input type="number" id="T6" name="T6" value="640" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T7">Bölge 7 (T7)</label>
+                            <input type="number" id="T7" name="T7" value="645" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T8">Bölge 8 (T8)</label>
+                            <input type="number" id="T8" name="T8" value="655" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T9">Bölge 9 (T9)</label>
+                            <input type="number" id="T9" name="T9" value="655" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T10">Bölge 10 (T10)</label>
+                            <input type="number" id="T10" name="T10" value="653" min="500" max="680">
+                        </div>
+                        <div class="input-control">
+                            <label for="T11">Çıkış Sıcaklığı (T11)</label>
+                            <input type="number" id="T11" name="T11" value="653" min="500" max="680">
+                        </div>
+                    </div>
+
+                    <!-- Soğutma Basınçları -->
+                    <div class="form-group-title">Alt Soğutma Basınçları (AB - bar)</div>
+                    <div class="inputs-grid pressure-grid">
+                        <div class="input-control">
+                            <label for="AB1">Alt Basınç 1 (AB1)</label>
+                            <input type="number" id="AB1" name="AB1" value="30" min="10" max="100">
+                        </div>
+                        <div class="input-control">
+                            <label for="AB2">Alt Basınç 2 (AB2)</label>
+                            <input type="number" id="AB2" name="AB2" value="30" min="10" max="100">
+                        </div>
+                        <div class="input-control">
+                            <label for="AB3">Alt Basınç 3 (AB3)</label>
+                            <input type="number" id="AB3" name="AB3" value="36" min="10" max="100">
+                        </div>
+                    </div>
+
+                    <div class="form-group-title">Üst Soğutma Basınçları (ÜB - bar)</div>
+                    <div class="inputs-grid pressure-grid">
+                        <div class="input-control">
+                            <label for="UB1">Üst Basınç 1 (ÜB1)</label>
+                            <input type="number" id="UB1" name="UB1" value="6" min="0" max="100">
+                        </div>
+                        <div class="input-control">
+                            <label for="UB2">Üst Basınç 2 (ÜB2)</label>
+                            <input type="number" id="UB2" name="UB2" value="6" min="0" max="100">
+                        </div>
+                        <div class="input-control">
+                            <label for="UB3">Üst Basınç 3 (ÜB3)</label>
+                            <input type="number" id="UB3" name="UB3" value="6" min="0" max="100">
+                        </div>
+                    </div>
+
+                    <!-- Şoklama Havası -->
+                    <div class="form-group-title">Şoklama Havası</div>
+                    <div class="inputs-grid single-grid">
+                        <div class="input-control">
+                            <label for="shock_temp">Şoklama Hava Sıcaklığı (°C)</label>
+                            <input type="number" id="shock_temp" name="shock_temp" value="32" min="10" max="60">
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Results Section (Right Side) -->
+            <div class="results-column">
+                <!-- Prediction Gauge Card -->
+                <section class="prediction-card dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-microchip"></i> Yapay Zeka Sonucu</h2>
+                    </div>
+                    
+                    <div class="gauge-container">
+                        <!-- Custom Gradient Progress Bar -->
+                        <div class="circular-progress" id="progress-circle">
+                            <div class="value-container" id="probability-value">0%</div>
+                        </div>
+                        <div class="probability-label">Kırılma Olasılığı</div>
+                    </div>
+
+                    <div class="prediction-status" id="prediction-status">
+                        <span class="status-badge" id="status-badge">Hesaplanıyor...</span>
+                        <p class="status-desc" id="status-desc">Değerleri değiştirdiğinizde tahmin anlık olarak güncellenir.</p>
+                    </div>
+                </section>
+
+                <!-- Temperature Profile Mini Chart -->
+                <section class="chart-card dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-line"></i> Sıcaklık Profili</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="tempChart"></canvas>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Bottom Visualizations (Only show or populate if data is uploaded) -->
+        <footer class="bottom-charts" id="data-visualization-section" style="display: none;">
+            <div class="dashboard-card chart-card-large">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-chart-column"></i> Soğutma Hava Basıncı ve Sıcaklık İlişkisi</h2>
+                </div>
+                <div class="chart-wrapper-large">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-card chart-card-large">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Kırılma Dağılımı (Şoklama Sıcaklığına Göre)</h2>
+                </div>
+                <div class="chart-wrapper-large">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- SheetJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
